@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<title>日期密碼</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="日期密碼">
+<meta name="theme-color" content="#FDF7EC">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<style>
+  :root{
+    --bg:#FDF7EC; --card:#FFFFFF; --card-stroke:#EBD8BB; --line:#D9B98C;
+    --gold:#9C5709; --gold-deep:#8A5417; --text:#2A1B0E; --muted:#5A3F26;
+    --faint:#7C5C3B; --input:#FFFDF8; --result:#FCF0D8; --tab:#F3E1BC;
+    --tab-press:#E3C694; --gold-text:#6B3E0B; --error:#B3261E; --track:#EADCC0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
+  body{
+    font-family:"Microsoft JhengHei","PingFang TC","Heiti TC",-apple-system,
+                "Segoe UI",sans-serif;
+    font-size:16px;line-height:1.4;
+    padding:14px 16px calc(12px + env(safe-area-inset-bottom)) 16px;
+    padding-top:calc(14px + env(safe-area-inset-top));
+    min-height:100vh;
+  }
+  .wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:11px;height:100%}
+
+  header{display:flex;align-items:center;gap:10px;padding:2px 2px 0}
+  header img{width:38px;height:38px;flex:none}
+  header h1{margin:0;font-size:23px;font-weight:700;letter-spacing:.02em}
+
+  .card{
+    background:var(--card);border:1px solid var(--card-stroke);border-radius:18px;
+    padding:15px;display:flex;flex-direction:column;gap:0;flex:1;min-height:250px;
+  }
+
+  .row{display:flex;align-items:center;gap:0;min-width:0}
+  .title{
+    flex:1;min-width:0;margin-right:8px;font-size:17px;font-weight:700;color:var(--gold);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .pill{
+    flex:none;border-radius:18px;padding:7px 9px;font-size:16px;font-weight:700;
+    border:1px solid var(--line);background:var(--tab);color:var(--muted);
+    cursor:pointer;user-select:none;transition:transform .08s,background .08s,border-color .08s;
+    margin-left:6px;line-height:1.2;
+  }
+  .pill:first-of-type{margin-left:0}
+  .pill.today{margin-left:8px;padding:7px 12px;border:1.5px solid var(--gold-deep);color:var(--text);background:var(--tab)}
+  .pill.on{background:var(--tab-press);border:2.5px solid var(--gold);color:var(--gold-text)}
+  .pill:active,.pill.today:active{transform:scale(.94);background:var(--gold);border-color:var(--gold-text);color:#fff}
+  .pill.on:active{background:var(--gold);border-color:var(--gold-text);color:#fff}
+
+  .mode{font-size:13px;color:var(--faint);margin:6px 0 0;min-height:18px}
+
+  .fields{display:flex;gap:8px;margin-top:9px;align-items:flex-end}
+  .field{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .field.w14{flex:1.4}
+  .field.w09{flex:.9}
+  .field.w115{flex:1.15}
+  .field label{font-size:14px;color:var(--muted)}
+  .field input{
+    width:100%;min-width:0;height:54px;text-align:center;font-size:25px;color:var(--text);
+    background:var(--input);border:1px solid var(--line);border-radius:12px;
+    font-family:inherit;outline:none;padding:0 4px;
+    -moz-appearance:textfield;
+  }
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .field input:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(156,87,9,.18)}
+
+  .err{font-size:14px;font-weight:700;color:var(--error);margin-top:6px;min-height:0}
+  .err:empty{display:none}
+
+  .result{
+    margin-top:9px;background:var(--result);border:1px solid var(--card-stroke);
+    border-radius:14px;padding:11px 15px;flex:1;min-height:136px;
+    display:flex;flex-direction:column;justify-content:center;gap:3px;
+    cursor:pointer;user-select:none;
+  }
+  .result:active{background:#F7E6BF}
+  .result.hidden{visibility:hidden}
+  .bigrow{display:flex;align-items:center;min-width:0;gap:10px}
+  .yr{
+    flex:none;font-size:20px;font-weight:700;color:var(--text);white-space:nowrap;
+  }
+  .big{
+    flex:1;min-width:0;font-weight:700;color:var(--gold);
+    font-size:clamp(20px,8.2vw,34px);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;
+  }
+  .meta{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .barrow{display:flex;align-items:center;gap:11px;margin-top:9px}
+  .bar{flex:1;height:12px;border-radius:6px;background:var(--track);overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#D89B33,#9C5709);width:0;transition:width .18s}
+  .pct{flex:none;font-size:14px;font-weight:700;color:var(--text);min-width:44px;text-align:right}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));
+    transform:translate(-50%,12px);background:var(--text);color:#FFF8EE;
+    padding:10px 18px;border-radius:22px;font-size:15px;font-weight:700;
+    opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:9;
+    box-shadow:0 6px 20px rgba(0,0,0,.18);white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  footer{font-size:12px;color:var(--faint);text-align:center;padding:2px 0 6px}
+  @media (max-height:700px){.card{min-height:220px}.result{min-height:118px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="apple-touch-icon.png" alt="">
+    <h1>日期密碼</h1>
+  </header>
+
+  <!-- ============ TOP: date -> cipher ============ -->
+  <section class="card" id="cardTop">
+    <div class="row">
+      <div class="title">請輸入日期</div>
+      <span class="pill on" data-mode="0" data-half="top">1/1</span>
+      <span class="pill" data-mode="1" data-half="top">1/4</span>
+      <span class="pill" data-mode="2" data-half="top">1/7</span>
+      <span class="pill today" id="todayTop">今日</span>
+    </div>
+    <div class="mode" id="modeTop"></div>
+
+    <div class="fields">
+      <div class="field w14"><label for="y1">年份</label><input id="y1" type="number" inputmode="numeric" maxlength="4"></div>
+      <div class="field w09"><label for="m1">月</label><input id="m1" type="number" inputmode="numeric" maxlength="2"></div>
+      <div class="field w09"><label for="d1">日</label><input id="d1" type="number" inputmode="numeric" maxlength="2"></div>
+    </div>
+    <div class="err" id="errTop"></div>
+
+    <div class="result" id="resTop">
+      <div class="bigrow"><span class="yr" id="yrTop"></span><span class="big" id="bigTop"></span></div>
+      <div class="meta" id="metaTop"></div>
+      <div class="barrow"><div class="bar"><i id="barTop"></i></div><span class="pct" id="pctTop"></span></div>
+    </div>
+  </section>
+
+  <!-- ============ BOTTOM: cipher -> date ============ -->
+  <section class="card" id="cardBottom">
+    <div class="row">
+      <div class="title">請輸入密碼</div>
+      <span class="pill on" data-mode="0" data-half="bottom">1/1</span>
+      <span class="pill" data-mode="1" data-half="bottom">1/4</span>
+      <span class="pill" data-mode="2" data-half="bottom">1/7</span>
+      <span class="pill today" id="todayBottom">今日</span>
+    </div>
+    <div class="mode" id="modeBottom"></div>
+
+    <div class="fields">
+      <div class="field"><label for="y2">年份</label><input id="y2" type="number" inputmode="numeric" maxlength="4"></div>
+      <div class="field w115"><label for="c2">密碼</label><input id="c2" type="number" inputmode="numeric" maxlength="3"></div>
+    </div>
+    <div class="err" id="errBottom"></div>
+
+    <div class="result" id="resBottom">
+      <div class="bigrow"><span class="yr" id="yrBottom"></span><span class="big" id="bigBottom"></span></div>
+      <div class="meta" id="metaBottom"></div>
+      <div class="barrow"><div class="bar"><i id="barBottom"></i></div><span class="pct" id="pctBottom"></span></div>
+    </div>
+  </section>
+
+  <footer>1/1 = 1月1日 ・ 1/4 = 4月1日 ・ 1/7 = 7月1日 ・ 㩒答案可複製</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- pure date arithmetic (same rules as the Android app) ---------- */
+  var START_MONTH = [1,4,7];                 // Hong Kong day/month: 1/4 = 1 April
+  var MODE_TEXT = ["密碼由 1月1日 起計","密碼由 4月1日 起計","密碼由 7月1日 起計"];
+  var START_TEXT= ["1月1日","4月1日","7月1日"];
+  var WEEK = ["日","一","二","三","四","五","六"];
+
+  function isLeap(y){ return (y%4===0 && y%100!==0) || y%400===0; }
+  function daysInYear(y){ return isLeap(y)?366:365; }
+  function monthDays(y,m){
+    if(m===2) return isLeap(y)?29:28;
+    if(m===4||m===6||m===9||m===11) return 30;
+    return 31;
+  }
+  function dateToDay(y,m,d){ var n=d; for(var i=1;i<m;i++) n+=monthDays(y,i); return n; }
+  function dayToDate(y,n){
+    var r=n;
+    for(var m=1;m<=12;m++){ var L=monthDays(y,m); if(r<=L) return {m:m,d:r}; r-=L; }
+    return {m:12,d:31};
+  }
+  function weekdayOf(y,m,d){                 // Zeller, 0 = Sunday
+    var yy=y, mm=m;
+    if(mm<3){ mm+=12; yy-=1; }
+    var k=yy%100, j=Math.floor(yy/100);
+    var h=(d+Math.floor(13*(mm+1)/5)+k+Math.floor(k/4)+Math.floor(j/4)+5*j)%7;
+    return (h+6)%7;
+  }
+  function offsetFor(year,mode){ return dateToDay(year,START_MONTH[mode],1)-1; }
+  function pad3(n){ return String(n).padStart(3,"0"); }
+  function pctText(v,total){
+    if(total<=0) total=1;
+    var n=Math.round(v*1000/total)/10;
+    return (n===Math.floor(n)? String(n): String(n)) + "%";
+  }
+
+  /* ---------- state: the two halves are fully independent ---------- */
+  var st = {
+    top:    { mode:0, doy:0, answer:"", override:null },
+    bottom: { mode:0, doy:0, answer:"", override:null }
+  };
+  var today = new Date();
+  var TODAY_Y = today.getFullYear(), TODAY_M = today.getMonth()+1, TODAY_D = today.getDate();
+
+  function $(id){ return document.getElementById(id); }
+  function val(id){ return $(id).value.trim(); }
+  function num(id){ var s=val(id); if(!s) return -1; var n=parseInt(s,10); return isNaN(n)?-1:n; }
+  function setVal(id,v){ $(id).value = String(v); }
+
+  /* ---------- rendering ---------- */
+  function showErr(half,msg){
+    $(half==="top"?"errTop":"errBottom").textContent = msg;
+    $(half==="top"?"resTop":"resBottom").classList.add("hidden");
+    st[half].answer="";
+  }
+  function clearErr(half){
+    $(half==="top"?"errTop":"errBottom").textContent = "";
+    $(half==="top"?"resTop":"resBottom").classList.remove("hidden");
+  }
+  function setProgress(half,value,total){
+    if(total<=0) total=1;
+    var p = Math.max(0,Math.min(100, value*100/total));
+    $(half==="top"?"barTop":"barBottom").style.width = p+"%";
+    $(half==="top"?"pctTop":"pctBottom").textContent = pctText(value,total);
+  }
+  function updateModes(){
+    $("modeTop").textContent    = MODE_TEXT[st.top.mode];
+    $("modeBottom").textContent = MODE_TEXT[st.bottom.mode];
+    document.querySelectorAll(".pill[data-mode]").forEach(function(p){
+      var on = (Number(p.dataset.mode) === st[p.dataset.half==="top"?"top":"bottom"].mode);
+      p.classList.toggle("on",on);
+    });
+  }
+
+  /* ---------- TOP: date -> cipher ---------- */
+  function recomputeTop(){
+    var h=st.top; h.answer="";
+    var y=num("y1");
+    if(y<1||y>9999){ showErr("top","請輸入有效年份（1 至 9999）"); return; }
+    var m=num("m1"), d=num("d1");
+    if(m<1||m>12){ showErr("top","月份要喺 1 至 12 之間"); return; }
+    var maxD=monthDays(y,m);
+    if(d<1||d>maxD){ showErr("top","呢個月最多 "+maxD+" 日"); return; }
+
+    var off=offsetFor(y,h.mode);
+    var doy=dateToDay(y,m,d);
+    var cipher=doy-off;
+    if(cipher<1){ showErr("top","日期早過起點（"+START_TEXT[h.mode]+"）"); return; }
+
+    clearErr("top");
+    h.answer = "第 "+pad3(cipher)+" 日";
+    $("yrTop").textContent  = y+" 年";
+    $("bigTop").textContent = "第 "+pad3(cipher)+" 日";
+    var kind = isLeap(y)?"閏年":"平年";
+    $("metaTop").textContent = "星期"+WEEK[weekdayOf(y,m,d)]+" · "+kind+" · "+daysInYear(y)+" 日";
+    setProgress("top",cipher,daysInYear(y)-off);
+  }
+
+  /* ---------- BOTTOM: cipher -> date ---------- */
+  function recomputeBottom(){
+    var h=st.bottom; h.answer="";
+    if(h.override){ showErr("bottom",h.override); return; }
+    var y=num("y2");
+    if(y<1||y>9999){ h.doy=0; showErr("bottom","請輸入有效年份（1 至 9999）"); return; }
+    var days=daysInYear(y), off=offsetFor(y,h.mode), maxCipher=days-off;
+    var c=num("c2");
+    if(c<1||c>maxCipher){
+      h.doy=0; showErr("bottom","密碼要喺 001 至 "+pad3(maxCipher)+" 之間"); return;
+    }
+    var doy=c+off; h.doy=doy;
+    var md=dayToDate(y,doy);
+    clearErr("bottom");
+    h.answer = y+"年"+md.m+"月"+md.d+"日";
+    $("yrBottom").textContent  = y+" 年";
+    $("bigBottom").textContent = md.m+"月"+md.d+"日";
+    var kind = isLeap(y)?"閏年":"平年";
+    $("metaBottom").textContent = "星期"+WEEK[weekdayOf(y,md.m,md.d)]+" · "+kind+" · "+days+" 日 · 本年餘下 "+(days-doy)+" 日";
+    setProgress("bottom",c,maxCipher);
+  }
+
+  /* ---------- mode switch ---------- */
+  function switchMode(half,mode){
+    var h=st[half];
+    if(half==="bottom" && h.doy>0){
+      var y=num("y2");
+      if(y>=1 && y<=9999){
+        var nc = h.doy - offsetFor(y,mode);
+        if(nc>=1){ h.override=null; setVal("c2",nc); }
+        else { h.override="日期早過起點（"+START_TEXT[mode]+"）"; setVal("c2",""); }
+      }
+    }
+    h.mode=mode;
+    updateModes();
+    if(half==="top") recomputeTop(); else recomputeBottom();
+  }
+
+  /* ---------- today ---------- */
+  function todayTop(){
+    setVal("y1",TODAY_Y); setVal("m1",TODAY_M); setVal("d1",TODAY_D);
+    recomputeTop(); toast("已填入今日");
+  }
+  function todayBottom(){
+    var off=offsetFor(TODAY_Y,st.bottom.mode);
+    var c=dateToDay(TODAY_Y,TODAY_M,TODAY_D)-off;
+    setVal("y2",TODAY_Y);
+    if(c>=1){ st.bottom.override=null; setVal("c2",c); }
+    else { st.bottom.override="日期早過起點（"+START_TEXT[st.bottom.mode]+"）"; setVal("c2",""); }
+    st.bottom.doy=0;
+    recomputeBottom(); toast("已填入今日");
+  }
+
+  /* ---------- toast + copy ---------- */
+  var toastTimer=null;
+  function toast(msg){
+    var t=$("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove("show");},1600);
+  }
+  function copy(half){
+    var text=st[half].answer;
+    if(!text) return;
+    function done(){ toast("答案已複製"); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(text,done); });
+    } else fallback(text,done);
+  }
+  function fallback(text,done){
+    var ta=document.createElement("textarea");
+    ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(e){ toast("複製失敗，請手動抄低"); }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- wire up ---------- */
+  ["y1","m1","d1"].forEach(function(id){
+    $(id).addEventListener("input",function(){
+      var v=this.value.replace(/[^0-9]/g,""); this.value=v; recomputeTop();
+    });
+  });
+  ["y2","c2"].forEach(function(id){
+    $(id).addEventListener("input",function(){
+      var v=this.value.replace(/[^0-9]/g,""); this.value=v;
+      st.bottom.override=null; recomputeBottom();
+    });
+  });
+  document.querySelectorAll(".pill[data-mode]").forEach(function(p){
+    p.addEventListener("click",function(){ switchMode(p.dataset.half,Number(p.dataset.mode)); });
+  });
+  $("todayTop").addEventListener("click",todayTop);
+  $("todayBottom").addEventListener("click",todayBottom);
+  $("resTop").addEventListener("click",function(){copy("top");});
+  $("resBottom").addEventListener("click",function(){copy("bottom");});
+
+  /* ---------- boot ---------- */
+  setVal("y1",TODAY_Y); setVal("m1",TODAY_M); setVal("d1",TODAY_D);
+  setVal("y2",TODAY_Y); setVal("c2",dateToDay(TODAY_Y,TODAY_M,TODAY_D));
+  updateModes();
+  recomputeTop();
+  recomputeBottom();
+
+  /* optional offline cache (GitHub Pages is https, so a service worker is allowed) */
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
